@@ -20,6 +20,7 @@ from tensorboardX import SummaryWriter
 import  xml.dom.minidom
 import torch.nn as nn
 
+
 class My_tokenizer(object):
     def __init__(self,config,vocab,max_seq_len,max_doc_len):
         self.config=config
@@ -52,6 +53,44 @@ class My_tokenizer(object):
                 curb.append(curdoc)
             doc_seq_tok_ids.append(curb)
         return doc_seq_tok_ids
+
+class My_embedding(nn.Module):
+    def __init__(self,config,vocab,hidden_size,dropout):
+        super(My_embedding, self).__init__()
+        self.config=config
+        self.vocab=vocab
+        self.vocab_len=len(vocab)
+        self.hidden_size=hidden_size
+        self.emb_layer=nn.Embedding(self.vocab_len,self.hidden_size)
+        self.pos_emb_layer=nn.Embedding(self.config.seq_len,self.hidden_size)
+        self.layer_norm = nn.LayerNorm(hidden_size)
+        self.dropout = nn.Dropout(dropout)
+    def forward(self,doc_seq_tok_ids):
+        batch_size,doc_len, seq_len =doc_seq_tok_ids.size()
+        doc_seq_tok_emb=self.emb_layer(doc_seq_tok_ids)
+        seq_tok_pos_ids=torch.arange(0,self.hidden_size,dtype=torch.long,requires_grad=False)
+
+        doc_seq_tok_pos_ids=seq_tok_pos_ids.unsqueeze(0).unsqueeze(0).unsqueeze(0).\
+            expand(batch_size,doc_len,seq_len,self.hidden_size)
+
+        doc_seq_pos_emb=self.pos_emb_layer(doc_seq_tok_pos_ids)
+
+        doc_seq_tok_emb_all=doc_seq_tok_emb+doc_seq_pos_emb
+        doc_seq_tok_emb_out=self.layer_norm(doc_seq_tok_emb_all)
+        doc_seq_tok_emb_out=self.dropout(doc_seq_tok_emb_out)
+        return doc_seq_tok_emb_out
+
+class My_bert_model(nn.Module):
+    def __init__(self, config, vocab, max_seq_len, max_doc_len):
+        super(My_bert_model, self).__init__()
+        self.config = config
+        self.vocab = vocab
+        self.max_seq_len = max_seq_len
+        self.max_doc_len = max_doc_len
+    def forward(self):
+        pass
+
+
 class Mymodel(nn.Module):
     def __init__(self):
         super(Mymodel,self).__init__()
