@@ -88,29 +88,31 @@ class Seqexample(object):
 
 class Event(object):
     def __init__(self,aspect="",certainty="",class_="",
-                 comment="",factuality="",id="",modality="",polarity="",pos="",tense=""):
+                 comment="",factuality="",id="",edoc_sig_id=-1,modality="",polarity="",pos="",tense=""):
         self.aspect=aspect
         self.certainty=certainty
         self.class_=class_
         self.comment=comment
         self.factuality=factuality
         self.id=id
+        self.edoc_sig_id=edoc_sig_id
         self.modality=modality
         self.polarity=polarity
         self.pos=pos
         self.tense=tense
         self.tok_lis=[]
-        self.event_span=[]
+        self.tok_ids_lis=[]
+        self.event_tok_span=[]
 
     def add_tok(self,tok):
         self.tok_lis.append(tok)
 
-    def get_event_span(self):
-        seq_id,tok_s_ids=self.tok_lis[0].tok_span
-        seq_id,tok_e_ids=self.tok_lis[-1].tok_span
-        self.event_span.append(seq_id)
-        self.event_span.append(tok_s_ids)
-        self.event_span.append(tok_e_ids)
+    # def get_event_span(self):
+    #     seq_id,tok_s_ids=self.tok_lis[0].tok_span
+    #     seq_id,tok_e_ids=self.tok_lis[-1].tok_span
+    #     self.event_span.append(seq_id)
+    #     self.event_span.append(tok_s_ids)
+    #     self.event_span.append(tok_e_ids)
 
     def update_by_dict(self,data_dict):
         for k,v in data_dict.items():
@@ -133,12 +135,15 @@ Event(
     pos = {}
     tense = {}
     tok_lis = {}
+    tok_ids_lis = {}
+    event_tok_span = {}
 )'''.format(self.aspect,self.certainty,self.class_,self.comment,self.factuality
-                   ,self.id,self.modality,self.polarity,self.pos,self.tense,self.tok_lis)
+                   ,self.id,self.modality,self.polarity,self.pos,self.tense,self.tok_lis,
+            self.tok_ids_lis,self.event_tok_span)
         return s
 
 class EventRelation(object):
-    def __init__(self,relation_id,s_event,e_event):
+    def __init__(self,relation_id=-1,s_event=None,e_event=None):
         self.relation_id=relation_id
         self.s_event=s_event
         self.e_event=e_event
@@ -154,12 +159,17 @@ class EventRelation(object):
         return s
 
 class Docsample(object):
-    def __init__(self,doc_text,doc_id):
+    def __init__(self,doc_text="",doc_id=-1):
         self.doc_text=doc_text
         self.doc_id=doc_id
         self.doc_seqs=doc_text.split('\n')
+        #一个事件中包含子事件怎么搞
         self.doc_events=[]
         self.doc_event_relations=[]
+        self.doc_event_relations_edoc_sig_id_pair=[]
+        self.doc_seqs_ids=[]
+        self.seqids2toklis=dict()
+        self.label_lis=[]
     def update_by_dict(self,data_dict):
         for k,v in data_dict.items():
             setattr(self,k,v)
@@ -169,7 +179,21 @@ class Docsample(object):
         self.doc_events.append(event)
     def add_relation(self,relation):
         self.doc_event_relations.append(relation)
-        
+
+    def __repr__(self):
+        s=""
+        s+='''
+Docsample(
+    doc_text = {}
+    doc_id = {}
+    doc_seqs = {}
+    doc_event_relations = {}
+    doc_seqs_ids = {}
+    seqids2toklis = {}
+)
+        '''.format(self.doc_text,self.doc_id,self.doc_seqs,self.doc_event_relations,self.doc_seqs_ids,
+                   self.seqids2toklis)
+        return s
 
 if __name__ == "__main__":
     a=BaseToken('ddd',1,0,1)
