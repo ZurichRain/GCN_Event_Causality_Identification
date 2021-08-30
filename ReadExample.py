@@ -51,6 +51,7 @@ class DocExampleLoader(object):
         self.docid2seqids2toklis=dict()
         self.docid2wordids2tokdocidslis=dict()
         self.docid2eventid2event=dict()
+        self.docid2eventedocsigid2event=dict()
 
     def parse_xml_get_tokens(self,dom_tree):
         root = dom_tree.documentElement
@@ -156,7 +157,7 @@ class DocExampleLoader(object):
     def parse_xml_get_event(self,dom_tree,curdoc):
         root = dom_tree.documentElement
         Events = root.getElementsByTagName('EVENT')
-        for event in Events:
+        for edocid,event in enumerate(Events):
             aevent=Event()
             aevent.aspect=event.getAttribute('aspect')
             aevent.certainty = event.getAttribute('certainty')
@@ -164,6 +165,7 @@ class DocExampleLoader(object):
             aevent.comment=event.getAttribute('comment')
             aevent.factuality = event.getAttribute('factuality')
             aevent.id = int(event.getAttribute('id'))
+            aevent.edoc_sig_id=edocid
             aevent.modality = event.getAttribute('modality')
             aevent.polarity = event.getAttribute('polarity')
             aevent.pos = event.getAttribute('pos')
@@ -178,6 +180,7 @@ class DocExampleLoader(object):
                         break
                 aevent.tok_ids_lis.append(tok_ids)
             self.docid2eventid2event[curdoc.doc_id][aevent.id]=aevent
+            self.docid2eventedocsigid2event[curdoc.doc_id][aevent.edoc_sig_id] = aevent
             curdoc.doc_events.append(aevent)
             # if(len(aevent.tok_ids_lis)>1):
             #     print(aevent)
@@ -192,13 +195,14 @@ class DocExampleLoader(object):
             curdocid=self.docname2docid[xml_file_name[:-4]]
             adoc=self.docid2docexample[curdocid]
             self.docid2eventid2event[curdocid]=dict()
+            self.docid2eventedocsigid2event[curdocid]=dict()
             self.io_tool.get_data_from_xml(xml_file,self.parse_xml_get_event,curdoc=adoc)
 
         # print(self.docid2docexample[0].doc_events)
         # print("*"*100)
         # print(self.docname2docid['ABC19980114.1830.0611'])
         # print(self.docid2docexample[135].doc_events)
-    def parse_xml_get_relations(self,dom_tree,curdoc):
+    def parse_xml_get_relations_and_label(self,dom_tree,curdoc):
         root = dom_tree.documentElement
         Clinks = root.getElementsByTagName('CLINK')
         for clink in Clinks:
@@ -214,7 +218,19 @@ class DocExampleLoader(object):
                 eid=int(target.getAttribute('id'))
                 arelation.e_event = self.docid2eventid2event[curdoc.doc_id][eid]
             curdoc.doc_event_relations.append(arelation)
-    def get_doc_relations(self,xml_file_dir):
+            curdoc.doc_event_relations_edoc_sig_id_pair.append((arelation.s_event.edoc_sig_id,
+                                                                arelation.e_event.edoc_sig_id))
+            curdoc.doc_event_relations_edoc_sig_id_pair.append((arelation.e_event.edoc_sig_id,
+                                                                arelation.s_event.edoc_sig_id))
+        for edocidxi in range(len(curdoc.doc_events)):
+            for edocidxj in range(len(curdoc.doc_events)):
+                if(edocidxi==edocidxj):
+                    continue
+                if((edocidxi,edocidxj) in curdoc.doc_event_relations_edoc_sig_id_pair):
+                    curdoc.label_lis.append(1)
+                else:
+                    curdoc.label_lis.append(0)
+    def get_doc_relations_and_label(self,xml_file_dir):
         xml_file_dir = os.path.join(self.base_dir, xml_file_dir)
         for xml_file_name in os.listdir(xml_file_dir):
             if (xml_file_name[-3:] != 'xml'):
@@ -222,7 +238,7 @@ class DocExampleLoader(object):
             xml_file = os.path.join(xml_file_dir, xml_file_name)
             curdocid = self.docname2docid[xml_file_name[:-4]]
             adoc = self.docid2docexample[curdocid]
-            self.io_tool.get_data_from_xml(xml_file, self.parse_xml_get_relations, curdoc=adoc)
+            self.io_tool.get_data_from_xml(xml_file, self.parse_xml_get_relations_and_label, curdoc=adoc)
     def __call__(self,xml_json_dir,tml_json_dir,*args, **kwargs):
         self.get_all_tokens(xml_json_dir)
         #下一步就是 构建每个doc_sample
@@ -231,12 +247,12 @@ class DocExampleLoader(object):
         #还需要知道每个事件以及事件之间的关系
         self.get_doc_event_from_xml(xml_json_dir)
         #实现将每个关系抽象出来
-        self.get_doc_relations(xml_json_dir)
+        self.get_doc_relations_and_label(xml_json_dir)
         for k,v in self.docid2seqids2toklis.items():
             adoc=self.docid2docexample[k]
             adoc.update_by_kv('seqids2toklis',v)
             # print(adoc)
-        return self.docid2docexample,self.docname2docid,self.all_token2ids,self.all_ids2token
+        return self.docid2docexample,self.docname2docid,self.all_token2ids,self.all_ids2token,self.docid2eventedocsigid2event
 
 
 if __name__ == "__main__":
