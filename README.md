@@ -1,2 +1,4 @@
 # GCN_Event_Causality_Identification
-GCN test myself for paper with code
+目前的进度已经把模型初版整理完毕
+下一步是做rerange 和采样
+再下一步就是解决事件关系超出截断的情况 doc估计也要rerange
